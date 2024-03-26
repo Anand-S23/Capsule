@@ -7,6 +7,7 @@ import (
 	"github.com/Anand-S23/capsule/internal/config"
 	"github.com/Anand-S23/capsule/internal/controller"
 	"github.com/Anand-S23/capsule/internal/router"
+	"github.com/Anand-S23/capsule/internal/store"
 )
 
 func main() {
@@ -15,10 +16,12 @@ func main() {
         log.Fatal(err)
     }
 
+    db := store.InitDB(env.DB_URI, env.PRODUCTION)
+
     controller := controller.NewController(env.PRODUCTION)
 
     baseRouter := router.NewRouter(controller)
-    router := router.NewCorsRouter(baseRouter, env.FRONTEND_URI)
+    router := router.NewCorsRouter(baseRouter, env.FE_URI)
 
     log.Println("Capsule backend running on port: ", env.PORT);
     http.ListenAndServe(":" + env.PORT, router)

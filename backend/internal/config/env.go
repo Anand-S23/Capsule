@@ -7,20 +7,23 @@ import (
 )
 
 type EnvVars struct {
-    PRODUCTION   bool
-    PORT         string
-    FRONTEND_URI string
+    PRODUCTION bool
+    PORT       string
+    DB_URI     string
+    FE_URI     string
 }
 
 func LoadEnv() (*EnvVars, error) {
     envMode     := GetEnv("MODE", "development")
     port        := GetEnv("PORT", "8080")
-    frontendURI := GetEnvOrPanic("FRONTEND_URI")
+    dbUri       := GetEnvOrPanic("DB_URI")
+    frontendURI := GetEnvOrPanic("FE_URI")
 
     return &EnvVars {
         PRODUCTION: (envMode == "production"),
         PORT: port,
-        FRONTEND_URI: frontendURI,
+        DB_URI: dbUri,
+        FE_URI: frontendURI,
     }, nil
 }
 
