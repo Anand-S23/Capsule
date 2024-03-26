@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Anand-S23/capsule/internal/jwt"
+	"github.com/Anand-S23/capsule/internal/util"
 	"github.com/Anand-S23/capsule/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -64,13 +64,13 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
 	}
 
     expDuration := time.Hour * 24
-    token, err := jwt.GenerateToken(c.JwtSecretKey, user.ID, expDuration)
+    token, err := util.GenerateToken(c.JwtSecretKey, user.ID, expDuration)
     if err != nil {
         log.Println("Error generating token")
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error occured, please try again later"))
     }
 
-    cookie := jwt.GenerateCookie(c.CookieSecret, jwt.COOKIE_NAME, token, expDuration, c.production)
+    cookie := util.GenerateCookie(c.CookieSecret, util.COOKIE_NAME, token, expDuration, c.production)
     if cookie == nil {
         log.Println("Error generating cookie")
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error occured, please try again later"))
@@ -85,9 +85,14 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (c *Controller) Logout(w http.ResponseWriter, r *http.Request) error {
-    cookie := models.GenerateExpiredCookie(models.COOKIE_NAME)
+    cookie := util.GenerateExpiredCookie(util.COOKIE_NAME)
     http.SetCookie(w, cookie)
     log.Println("User successfully logged out")
     return WriteJSON(w, http.StatusOK, "")
+}
+
+func (c *Controller) GetAuthUserID(w http.ResponseWriter, r *http.Request) error {
+    currentUserID := r.Context().Value("user_id").(string)
+    return WriteJSON(w, http.StatusOK, currentUserID)
 }
 
