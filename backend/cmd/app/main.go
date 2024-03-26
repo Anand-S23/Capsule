@@ -19,7 +19,7 @@ func main() {
     db := store.InitDB(env.DB_URI, env.PRODUCTION)
     store := store.NewStore(store.NewPgUserRepo(db))
 
-    controller := controller.NewController(store, env.PRODUCTION)
+    controller := controller.NewController(store, env.JWT_SECRET, env.COOKIE_HASH_KEY, env.COOKIE_BLOCK_KEY, env.PRODUCTION)
 
     baseRouter := router.NewRouter(controller)
     router := router.NewCorsRouter(baseRouter, env.FE_URI)

@@ -4,17 +4,22 @@ import (
 	"net/http"
 
 	"github.com/Anand-S23/capsule/internal/store"
+	"github.com/gorilla/securecookie"
 )
 
 type Controller struct {
-    store      *store.Store
-    production bool
+    store        *store.Store
+    production   bool
+    JwtSecretKey []byte
+    CookieSecret *securecookie.SecureCookie
 }
 
-func NewController(store *store.Store, production bool) *Controller {
+func NewController(store *store.Store, secretKey []byte, cookieHashKey []byte, cookieBlockKey []byte, production bool) *Controller {
     return &Controller {
         store: store,
         production: production,
+        JwtSecretKey: secretKey,
+        CookieSecret: securecookie.New(cookieHashKey, cookieBlockKey),
     }
 }
 
