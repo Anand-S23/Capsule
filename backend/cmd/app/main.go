@@ -16,7 +16,7 @@ func main() {
         log.Fatal(err)
     }
 
-    db := store.InitDB(env.DB_URI, env.PRODUCTION)
+    _ = store.InitDB(env.DB_URI, env.PRODUCTION)
 
     controller := controller.NewController(env.PRODUCTION)
 

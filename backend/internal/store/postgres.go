@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+
+    _ "github.com/lib/pq"
 )
 
 func InitDB(dbUrl string, production bool) *sql.DB {
@@ -46,11 +48,12 @@ func CreateTables(db *sql.DB) error {
     _, err := db.Exec(`
         CREATE TABLE IF NOT EXISTS users (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            name VARCHAR(255) NOT NULL,
             email VARCHAR(255) NOT NULL UNIQUE,
             phone VARCHAR(20) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            password VARCHAR(255) NOT NULL
-        )
+            password VARCHAR(255) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     `)
 
     if err != nil {
