@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Anand-S23/capsule/internal/controller"
+	"github.com/Anand-S23/capsule/internal/middleware"
 	"github.com/gorilla/handlers"
 )
 
@@ -11,6 +12,12 @@ func NewRouter(c *controller.Controller) *http.ServeMux {
     router := http.NewServeMux()
 
     router.HandleFunc("GET /ping", Fn(c.Ping))
+
+    // Auth
+    router.HandleFunc("POST /register", Fn(c.Register))
+    router.HandleFunc("POST /login", Fn(c.Login))
+    router.HandleFunc("POST /logout", Fn(c.Logout))
+    router.HandleFunc("GET /getAuthUserID", middleware.Auth(Fn(c.GetAuthUserID), c))
 
     return router
 }
