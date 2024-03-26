@@ -16,9 +16,10 @@ func main() {
         log.Fatal(err)
     }
 
-    _ = store.InitDB(env.DB_URI, env.PRODUCTION)
+    db := store.InitDB(env.DB_URI, env.PRODUCTION)
+    store := store.NewStore(store.NewPgUserRepo(db))
 
-    controller := controller.NewController(env.PRODUCTION)
+    controller := controller.NewController(store, env.PRODUCTION)
 
     baseRouter := router.NewRouter(controller)
     router := router.NewCorsRouter(baseRouter, env.FE_URI)

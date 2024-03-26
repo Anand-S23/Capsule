@@ -2,14 +2,18 @@ package controller
 
 import (
 	"net/http"
+
+	"github.com/Anand-S23/capsule/internal/store"
 )
 
 type Controller struct {
+    store      *store.Store
     production bool
 }
 
-func NewController(production bool) *Controller {
+func NewController(store *store.Store, production bool) *Controller {
     return &Controller {
+        store: store,
         production: production,
     }
 }
