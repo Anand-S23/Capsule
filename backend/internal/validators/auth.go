@@ -14,6 +14,7 @@ import (
 const (
     MAX_EMAIL_LENGHT = 255
     MAX_NAME_LENGHT = 255
+    MAX_PHONE_LENGHT = 20
 )
 
 func AuthValidator(userData models.RegisterDto, store *store.Store) map[string]string {
@@ -73,7 +74,7 @@ func validatePhoneNumber(phoneNumber string) error {
     re := regexp.MustCompile(e164Regex)
     phoneNumber = strings.ReplaceAll(phoneNumber, " ", "")
 
-    if re.Find([]byte(phoneNumber)) == nil {
+    if len(phoneNumber) > MAX_PHONE_LENGHT || re.Find([]byte(phoneNumber)) == nil {
         return errors.New("Phone number is not valid")
     }
 
