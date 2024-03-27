@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Anand-S23/capsule/pkg/auth"
 	"github.com/Anand-S23/capsule/internal/models"
+	"github.com/Anand-S23/capsule/internal/validators"
+	"github.com/Anand-S23/capsule/pkg/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,7 +20,11 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) error {
         return WriteJSON(w, http.StatusBadRequest, ErrMsg("Could not parse register data"))
     }
 
-    // TODO: Input validation
+    authErrs := validators.AuthValidator(userData, c.store)
+    if len(authErrs) != 0 {
+        log.Println("Failed to create new user, invalid data")
+        return WriteJSON(w, http.StatusBadRequest, authErrs)
+    }
 
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
 	if err != nil {
