@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -57,8 +58,12 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
     }
 
     user, err := c.store.UserRepo.GetByEmail(loginData.Email)
-    if user.ID == "" || err != nil {
-        log.Println("Could not get user by email from database, possibly does not exist")
+    if user == nil || user.ID == "" || err != nil {
+        if err == sql.ErrNoRows {
+            log.Println("Could not get user by email from database, does not exist")
+        } else {
+            log.Println("Could not get user by email from database :: ", err)
+        }
         return WriteJSON(w, http.StatusBadRequest, ErrMsg("Incorrect email or password, please try again"))
     }
 
