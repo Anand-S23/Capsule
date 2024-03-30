@@ -8,19 +8,19 @@ import (
 	"net/http"
 
 	"github.com/Anand-S23/capsule/internal/controller"
-	"github.com/Anand-S23/capsule/internal/util"
+	"github.com/Anand-S23/capsule/pkg/auth"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/securecookie"
 )
 
-func getUserFromResquest(r *http.Request, jwtSecretKey []byte, cookieSecret *securecookie.SecureCookie) (*util.Claims, error) {
-    tokenString, err := util.ParseCookie(r, cookieSecret, util.COOKIE_NAME)
+func getUserFromResquest(r *http.Request, jwtSecretKey []byte, cookieSecret *securecookie.SecureCookie) (*auth.Claims, error) {
+    tokenString, err := auth.ParseCookie(r, cookieSecret, auth.COOKIE_NAME)
 	if err != nil {
         errMsg := fmt.Sprintf("Invalid request, could not parse cookie: %s", err)
         return nil, errors.New(errMsg)
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &util.Claims{}, func(token *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &auth.Claims{}, func(token *jwt.Token) (interface{}, error) {
 		return jwtSecretKey, nil
 	})
 	if err != nil {
@@ -28,7 +28,7 @@ func getUserFromResquest(r *http.Request, jwtSecretKey []byte, cookieSecret *sec
         return nil, errors.New(errMsg)
 	}
     
-	claims, ok := token.Claims.(*util.Claims)
+	claims, ok := token.Claims.(*auth.Claims)
 	if !ok || !token.Valid {
         return nil, errors.New("Invalid token, not able to parse claims")
 	}

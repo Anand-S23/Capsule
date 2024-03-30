@@ -1,10 +1,12 @@
 package models
 
 type RegisterDto struct {
-    Name     string
-    Email    string
-    Phone    string
-    Password string
+    FirstName string
+    LastName  string
+    Email     string
+    Phone     string
+    Password  string
+    Confirm   string
 }
 
 type LoginDto struct {

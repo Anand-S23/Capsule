@@ -11,6 +11,7 @@ import (
 func NewRouter(c *controller.Controller) *http.ServeMux {
     router := http.NewServeMux()
 
+    // Health Check
     router.HandleFunc("GET /ping", Fn(c.Ping))
 
     // Auth

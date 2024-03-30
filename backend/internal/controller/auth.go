@@ -1,13 +1,15 @@
 package controller
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/Anand-S23/capsule/internal/util"
 	"github.com/Anand-S23/capsule/internal/models"
+	"github.com/Anand-S23/capsule/internal/validators"
+	"github.com/Anand-S23/capsule/pkg/auth"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,7 +21,11 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) error {
         return WriteJSON(w, http.StatusBadRequest, ErrMsg("Could not parse register data"))
     }
 
-    // TODO: Input validation
+    authErrs := validators.AuthValidator(userData, c.store)
+    if len(authErrs) != 0 {
+        log.Println("Failed to create new user, invalid data")
+        return WriteJSON(w, http.StatusBadRequest, authErrs)
+    }
 
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(userData.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -52,8 +58,12 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
     }
 
     user, err := c.store.UserRepo.GetByEmail(loginData.Email)
-    if user.ID == "" || err != nil {
-        log.Println("Could not get user by email from database, possibly does not exist")
+    if user == nil || user.ID == "" || err != nil {
+        if err == sql.ErrNoRows {
+            log.Println("Could not get user by email from database, does not exist")
+        } else {
+            log.Println("Could not get user by email from database :: ", err)
+        }
         return WriteJSON(w, http.StatusBadRequest, ErrMsg("Incorrect email or password, please try again"))
     }
 
@@ -64,13 +74,13 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
 	}
 
     expDuration := time.Hour * 24
-    token, err := util.GenerateToken(c.JwtSecretKey, user.ID, expDuration)
+    token, err := auth.GenerateToken(c.JwtSecretKey, user.ID, expDuration)
     if err != nil {
         log.Println("Error generating token")
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error occured, please try again later"))
     }
 
-    cookie := util.GenerateCookie(c.CookieSecret, util.COOKIE_NAME, token, expDuration, c.production)
+    cookie := auth.GenerateCookie(c.CookieSecret, auth.COOKIE_NAME, token, expDuration, c.production)
     if cookie == nil {
         log.Println("Error generating cookie")
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error occured, please try again later"))
@@ -85,7 +95,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (c *Controller) Logout(w http.ResponseWriter, r *http.Request) error {
-    cookie := util.GenerateExpiredCookie(util.COOKIE_NAME)
+    cookie := auth.GenerateExpiredCookie(auth.COOKIE_NAME)
     http.SetCookie(w, cookie)
     log.Println("User successfully logged out")
     return WriteJSON(w, http.StatusOK, "")
