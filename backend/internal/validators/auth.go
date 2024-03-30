@@ -7,6 +7,7 @@ import (
 	"net/mail"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/Anand-S23/capsule/internal/models"
 	"github.com/Anand-S23/capsule/internal/store"
@@ -16,6 +17,8 @@ const (
     MAX_EMAIL_LENGHT = 255
     MAX_NAME_LENGHT = 255
     MAX_PHONE_LENGHT = 20
+    MIN_PASSWORD_LENGHT = 8
+    MAX_PASSWORD_LENGTH = 30
 )
 
 func AuthValidator(userData models.RegisterDto, store *store.Store) map[string]string {
@@ -45,6 +48,18 @@ func AuthValidator(userData models.RegisterDto, store *store.Store) map[string]s
 }
 
 func validateName(firstName string, lastName string) error {
+     for _, l := range firstName {
+        if !unicode.IsLetter(l) {
+            return errors.New("Name must only contain letter")
+        }
+    }
+
+     for _, l := range lastName {
+        if !unicode.IsLetter(l) {
+            return errors.New("Name must only contain letter")
+        }
+    }
+
     fullName := fmt.Sprintf("%s %s", firstName, lastName)
     if len(fullName) > MAX_NAME_LENGHT {
         return errors.New("Name entered is not valid too long")
@@ -83,8 +98,9 @@ func validatePhoneNumber(phoneNumber string) error {
 }
 
 func validatePassword(password string, confirm string) error {
-    if len(password) < 8 || len(password) > 30 {
-        return errors.New("Password must be between 8 and 30 characters long")
+    if len(password) < MIN_PASSWORD_LENGHT || len(password) > MAX_PASSWORD_LENGTH {
+        errMsg := fmt.Sprintf("Password must be between %d and %d characters long", MIN_PASSWORD_LENGHT, MAX_PASSWORD_LENGTH)
+        return errors.New(errMsg)
     }
 
     if password != confirm {
