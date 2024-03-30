@@ -13,6 +13,8 @@ type UserRepo interface {
     GetByEmail(email string) (*models.User, error)
 }
 
+// PostgresUserRepo
+
 type PgUserRepo struct {
     Db *sql.DB
 }
@@ -88,3 +90,22 @@ func (pg *PgUserRepo) GetByEmail(email string) (*models.User, error) {
     return &user, nil
 }
 
+// MockUserRepo
+
+type MockUserRepo struct {}
+
+func (mr *MockUserRepo) Add(user models.User) error {
+    return nil
+}
+
+func (mr *MockUserRepo) DeleteByID(id string) error {
+    return nil
+}
+
+func (mr *MockUserRepo) GetByID(id string) (*models.User, error) {
+    return nil, nil
+}
+
+func (mr *MockUserRepo) GetByEmail(email string) (*models.User, error) {
+    return nil, nil
+}
