@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ func NewUser(userData RegisterDto) User {
     return User {
         ID: id,
         Email: userData.Email,
-        Name: userData.Name,
+        Name: fmt.Sprintf("%s %s", userData.FirstName, userData.LastName),
         Phone: userData.Phone,
         Password: userData.Password,
         CreatedAt: now,

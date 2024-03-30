@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -59,9 +60,9 @@ func validateEmail(email string, store *store.Store) error {
     }
 
     user, err := store.UserRepo.GetByEmail(email)
-    if err != nil {
+    if err != nil && err != sql.ErrNoRows {
         return errors.New("Internal server error, please try again later")
-    } else if user.ID != "" {
+    } else if user != nil && user.ID != "" && err != sql.ErrNoRows {
         return errors.New("User already exsits with that email")
     }
 
