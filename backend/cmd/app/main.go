@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Anand-S23/capsule/internal/config"
+	"github.com/Anand-S23/capsule/pkg/config"
 	"github.com/Anand-S23/capsule/internal/controller"
 	"github.com/Anand-S23/capsule/internal/router"
 	"github.com/Anand-S23/capsule/internal/store"
