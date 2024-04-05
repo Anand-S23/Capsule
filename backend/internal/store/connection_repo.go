@@ -9,7 +9,7 @@ import (
 type ConnectionRepo interface {
     Add(models.Connection) error
     GetOneByID(id string) (*models.Connection, error)
-    GetAllByOwnerID(ownerID string) (*models.Connection, error)
+    GetAllByOwnerID(ownerID string) ([]*models.Connection, error)
     Update(c models.Connection) error
     DeleteByID(id string) error
 }
@@ -27,105 +27,83 @@ func NewPgConnectionRepo(db *sql.DB) *PgConnectionRepo {
 }
 
 func (pg *PgConnectionRepo) Add(c models.Connection) error {
-    stmt, err := pg.Db.Prepare(`
-        INSERT INTO users (id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
-    `)
+    query := "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
 
-    if err != nil {
-        return err
-    }
-
-    defer stmt.Close()
-
-    _, err = stmt.Exec(
-        c.ID, 
-        c.OwnerID, 
-        c.FirstName, 
-        c.LastName, 
-        c.Email, 
-        c.Phone, 
-        c.LinkedIn, 
-        c.Company, 
-        c.Dob, 
-        c.Notes, 
-        c.CreatedAt)
+    _, err := pg.Db.Exec(query, c.ID, c.OwnerID, c.FirstName, c.LastName, c.Email, c.Phone, 
+        c.LinkedIn, c.Company, c.Dob, c.Notes, c.CreatedAt)
 
     return err
 }
 
 func (pg *PgConnectionRepo) GetOneByID(id string) (*models.Connection, error) {
-    stmt, err := pg.Db.Prepare(`
-        SELECT id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at FROM connections WHERE id = $1;
-    `)
-	if err != nil {
-        return nil, err
-	}
-	defer stmt.Close()
+    query := "SELECT * FROM connections WHERE id = $1;"
 
-	var c models.Connection
-	err = stmt.QueryRow(id).Scan(
-        &c.ID, &c.OwnerID, &c.Email, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.LinkedIn, &c.Company, &c.Dob, &c.Notes, &c.CreatedAt)
-	if err != nil {
-        return nil, err
-	}
+    row := pg.Db.QueryRow(query, id)
+    if row.Err() != nil {
+        return nil, row.Err()
+    }
+
+    var c models.Connection
+    row.Scan(&c)
 
     return &c, nil
 }
 
-func (pg *PgConnectionRepo) GetAllByOwnerID(ownerID string) (*models.Connection, error) {
-    stmt, err := pg.Db.Prepare(`
-        SELECT id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at FROM connections WHERE owner_id = $1;
-    `)
-	if err != nil {
-        return nil, err
-	}
-	defer stmt.Close()
+func (pg *PgConnectionRepo) GetAllByOwnerID(ownerID string) ([]*models.Connection, error) {
+    query := "SELECT * FROM connections WHERE owner_id = $1;"
 
-	var c models.Connection
-	err = stmt.QueryRow(ownerID).Scan(
-        &c.ID, &c.OwnerID, &c.Email, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.LinkedIn, &c.Company, &c.Dob, &c.Notes, &c.CreatedAt)
-	if err != nil {
+    rows, err := pg.Db.Query(query, ownerID)
+    if err != nil {
         return nil, err
-	}
+    }
+    defer rows.Close()
 
-    return &c, nil
+    connections := []*models.Connection{}
+
+    for rows.Next() {
+        var c models.Connection
+
+        err := rows.Scan(
+            &c.ID, &c.OwnerID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, 
+            &c.LinkedIn, &c.Company, &c.Dob, &c.Notes, &c.CreatedAt)
+
+        if err != nil {
+            return nil, err
+        }
+
+        connections = append(connections, &c)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    return connections, nil
 }
 
 func (pg *PgConnectionRepo) Update(c models.Connection) error {
-    stmt, err := pg.Db.Prepare(`
+    query := `
         UPDATE connections
-        SET first_name = $1
-            last_name = $2,
-            email = $3,
-            phone = $4,
-            linkedin = $5,
-            company = $6,
-            dob = $7
-        WHERE id = $8;
-    `)
-    if err != nil {
-        return err
-    }
+        SET first_name = $2
+            last_name = $3,
+            email = $4,
+            phone = $5,
+            linkedin = $6,
+            company = $7,
+            dob = $8
+        WHERE id = $1;
+    `
 
-    defer stmt.Close()
-
-    _, err = stmt.Exec(c.FirstName, c.LastName, c.Email, c.Phone, c.LinkedIn, c.Company, c.Dob)
+    _, err := pg.Db.Exec(query, c.ID, c.FirstName, c.LastName, 
+        c.Email, c.Phone, c.LinkedIn, c.Company, c.Dob) 
 
     return err
 }
 
 func (pg *PgConnectionRepo) DeleteByID(id string) error {
-    stmt, err := pg.Db.Prepare(`
-        DELETE FROM connections WHERE id = $1;
-    `)
-    if err != nil {
-        return err
-    }
+    query := "DELETE FROM connections WHERE id = $1;"
 
-    defer stmt.Close()
-
-    _, err = stmt.Exec(id)
+    _, err := pg.Db.Exec(query, id)
     return err
 }
 
