@@ -49,3 +49,20 @@ func NewConnection(connectionData ConnectionDto, ownerId string) Connection {
     }
 }
 
+func NewConnectionWithID(connectionData ConnectionDto, ownerId string, connectionID string) Connection {
+    now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+
+    return Connection {
+        ID: connectionID,
+        OwnerID: ownerId,
+        FirstName: connectionData.FirstName,
+        LastName: connectionData.LastName,
+        Email: connectionData.Email,
+        Phone: connectionData.Phone,
+        LinkedIn: connectionData.LinkedIn,
+        Company: connectionData.Company,
+        Dob: connectionData.Dob,
+        CreatedAt: now,
+    }
+}
+
