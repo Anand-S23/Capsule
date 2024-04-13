@@ -32,11 +32,10 @@ type Connection struct {
 }
 
 func NewConnection(connectionData ConnectionDto, ownerId string) Connection {
-    id := uuid.New().String()
     now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
     return Connection {
-        ID: id,
+        ID: uuid.NewString(),
         OwnerID: ownerId,
         FirstName: connectionData.FirstName,
         LastName: connectionData.LastName,
