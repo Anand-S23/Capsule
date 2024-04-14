@@ -17,6 +17,7 @@ type ConnectionDto struct {
     Notes     string
 }
 
+// TODO: Add profile picture to connection
 type Connection struct {
     ID        string    `json:"id"`
     OwnerID   string    `json:"ownerId"`
