@@ -17,11 +17,10 @@ type User struct {
 }
 
 func NewUser(userData RegisterDto) User {
-    id := uuid.New().String()
     now, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
 
     return User {
-        ID: id,
+        ID: uuid.NewString(),
         Email: userData.Email,
         Name: fmt.Sprintf("%s %s", userData.FirstName, userData.LastName),
         Phone: userData.Phone,

@@ -4,7 +4,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Anand-S23/capsule/internal/config"
+	"github.com/Anand-S23/capsule/pkg/config"
 	"github.com/Anand-S23/capsule/internal/controller"
 	"github.com/Anand-S23/capsule/internal/router"
 	"github.com/Anand-S23/capsule/internal/store"
@@ -17,7 +17,7 @@ func main() {
     }
 
     db := store.InitDB(env.DB_URI, env.PRODUCTION)
-    store := store.NewStore(store.NewPgUserRepo(db))
+    store := store.NewStore(store.NewPgUserRepo(db), store.NewPgConnectionRepo(db))
 
     controller := controller.NewController(store, env.JWT_SECRET, env.COOKIE_HASH_KEY, env.COOKIE_BLOCK_KEY, env.PRODUCTION)
 
