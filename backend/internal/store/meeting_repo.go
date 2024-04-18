@@ -44,7 +44,6 @@ func (pg *PgMeetingRepo) Add(m models.Meeting) error {
     return err
 }
 
-// TODO: Get Participants for the meeting
 func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
     query := "SELECT * FROM meetings WHERE id = $1;"
 
@@ -56,10 +55,37 @@ func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
     var m models.Meeting
     row.Scan(&m)
 
+    query = "SELECT * FROM participants WHERE meeting_id = $1;"
+
+    rows, err := pg.Db.Query(query, m.ID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    participants := []string{}
+
+    for rows.Next() {
+        var p models.Participant
+
+        err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+
+        if err != nil {
+            return nil, err
+        }
+
+        participants = append(participants, p.ConnectionID)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    m.Participants = participants
     return &m, nil
 }
 
-// TODO: Get Participants for each all meetings
+// TODO: see if there is a way to merge the two queries together
 func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, error) {
     query := "SELECT * FROM meetings WHERE owner_id = $1;"
 
@@ -81,6 +107,33 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, err
             return nil, err
         }
 
+        pQuery := "SELECT * FROM participants WHERE meeting_id = $1;"
+
+        pRows, err := pg.Db.Query(pQuery, m.ID)
+        if err != nil {
+            return nil, err
+        }
+        defer pRows.Close()
+
+        participants := []string{}
+
+        for pRows.Next() {
+            var p models.Participant
+
+            err := pRows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+
+            if err != nil {
+                return nil, err
+            }
+
+            participants = append(participants, p.ConnectionID)
+        }
+
+        if err := pRows.Err(); err != nil {
+            return nil, err
+        }
+
+        m.Participants = participants
         meetings = append(meetings, &m)
     }
 
@@ -91,9 +144,63 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, err
     return meetings, nil
 }
 
-// TODO: Get Participants, compare new update list and make neccessary changes - deleting or adding new participant
+// TODO: figure out where this should live
+func doesContain(list []string, val string) bool {
+    for _, element := range list {
+        if element == val {
+            return true
+        }
+    }
+
+    return false
+}
+
 func (pg *PgMeetingRepo) Update(m models.Meeting) error {
-    query := `
+    query := "SELECT * FROM participants WHERE meeting_id = $1"
+
+    rows, err := pg.Db.Query(query, m.ID)
+    if err != nil {
+        return err
+    }
+
+    var oldParticipants []models.Participant
+    var oldParticipantsID []string
+
+    for rows.Next() {
+        var p models.Participant
+
+        err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+
+        if err != nil {
+            return err
+        }
+
+        oldParticipants = append(oldParticipants, p)
+        oldParticipantsID = append(oldParticipantsID, p.ConnectionID)
+    }
+
+    for _, oldParticipant := range oldParticipants {
+        if !doesContain(m.Participants, oldParticipant.ConnectionID) {
+            query := "DELETE FROM participants WHERE id = $1;"
+            _, err := pg.Db.Exec(query, oldParticipant.ID)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    for _, participant := range m.Participants {
+        if !doesContain(oldParticipantsID, participant) {
+            participantsQuery := "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);"
+
+            _, err := pg.Db.Exec(participantsQuery, m.ID, participant, m.OwnerID)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    query = `
         UPDATE meetings
         SET when = $2
             location = $3,
@@ -102,16 +209,41 @@ func (pg *PgMeetingRepo) Update(m models.Meeting) error {
         WHERE id = $1;
     `
 
-    _, err := pg.Db.Exec(query, m.ID, m.When, m.Location, m.Notes, m.Description)
-
+    _, err = pg.Db.Exec(query, m.ID, m.When, m.Location, m.Notes, m.Description)
     return err
 }
 
-// TODO: Delete Participants with the same id
 func (pg *PgMeetingRepo) DeleteByID(id string) error {
-    query := "DELETE FROM meetings WHERE id = $1;"
+    query := "SELECT * FROM participants WHERE meeting_id = $1;"
 
-    _, err := pg.Db.Exec(query, id)
+    rows, err := pg.Db.Query(query, id)
+    if err != nil {
+        return err
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var p models.Participant
+
+        err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+        if err != nil {
+            return err
+        }
+
+
+        deleteQuery := "DELETE FROM participant WHERE id = $1;"
+        _, err = pg.Db.Exec(deleteQuery, p.ID)
+        if err != nil {
+            return err
+        }
+    }
+
+    if err := rows.Err(); err != nil {
+        return err
+    }
+
+    query = "DELETE FROM meetings WHERE id = $1;"
+    _, err = pg.Db.Exec(query, id)
     return err
 }
 
