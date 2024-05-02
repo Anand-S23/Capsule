@@ -27,15 +27,26 @@ func NewPgMeetingRepo(db *sql.DB) *PgMeetingRepo {
 }
 
 func (pg *PgMeetingRepo) Add(m models.Meeting) error {
-    meetingQuery := "INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
+    meetingQuery, err := pg.Db.Prepare("INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);")
+    if err != nil {
+        return err
+    }
+    defer meetingQuery.Close()
 
-    _, err := pg.Db.Exec(meetingQuery, m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
+    _, err = meetingQuery.Exec(m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
         m.Notes, m.Description, m.CreatedAt)
+    if err != nil {
+        return err
+    }
 
     for _, participant := range m.Participants {
-        participantsQuery := "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);"
+        participantsQuery, err := pg.Db.Prepare("INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
+        if err != nil {
+            return err
+        }
+        defer participantsQuery.Close()
 
-        _, err := pg.Db.Exec(participantsQuery, m.ID, participant, m.OwnerID)
+        _, err = participantsQuery.Exec(m.ID, participant, m.OwnerID)
         if err != nil {
             return err
         }
@@ -45,19 +56,21 @@ func (pg *PgMeetingRepo) Add(m models.Meeting) error {
 }
 
 func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
-    query := "SELECT * FROM meetings WHERE id = $1;"
-
-    row := pg.Db.QueryRow(query, id)
-    if row.Err() != nil {
-        return nil, row.Err()
+    query, err := pg.Db.Prepare("SELECT * FROM meetings WHERE id = $1;")
+    if err != nil {
+        return nil, err
     }
+    defer query.Close()
 
     var m models.Meeting
-    row.Scan(&m)
+    err = query.QueryRow(id).Scan(&m)
+	if err != nil {
+        return nil, err
+	}
+    
+    participantsQuery := "SELECT * FROM participants WHERE meeting_id = $1;"
 
-    query = "SELECT * FROM participants WHERE meeting_id = $1;"
-
-    rows, err := pg.Db.Query(query, m.ID)
+    rows, err := pg.Db.Query(participantsQuery, m.ID)
     if err != nil {
         return nil, err
     }
