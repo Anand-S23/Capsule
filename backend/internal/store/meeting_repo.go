@@ -26,21 +26,34 @@ func NewPgMeetingRepo(db *sql.DB) *PgMeetingRepo {
     }
 }
 
-func (pg *PgMeetingRepo) Add(m models.Meeting) error {
-    meetingQuery, err := pg.Db.Prepare("INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);")
+func (pg *PgMeetingRepo) Add(m models.Meeting) (err error) {
+    tx, err := pg.Db.Begin()
     if err != nil {
-        return err
+        return
+    }
+
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    meetingQuery, err := tx.Prepare("INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);")
+    if err != nil {
+        return
     }
     defer meetingQuery.Close()
 
     _, err = meetingQuery.Exec(m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
         m.Notes, m.Description, m.CreatedAt)
     if err != nil {
-        return err
+        return
     }
 
     for _, participant := range m.Participants {
-        participantsQuery, err := pg.Db.Prepare("INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
+        participantsQuery, err := tx.Prepare("INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
         if err != nil {
             return err
         }
@@ -52,7 +65,7 @@ func (pg *PgMeetingRepo) Add(m models.Meeting) error {
         }
     }
 
-    return err
+    return
 }
 
 func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
