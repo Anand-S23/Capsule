@@ -130,7 +130,7 @@ func (pg *PgMeetingRepo) GetOneByID(ctx context.Context, id string) (m *models.M
     return m, nil
 }
 
-func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) ([]*models.Meeting, error) {
+func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) (meetings []*models.Meeting, err error) {
     tx, err := pg.Db.BeginTx(ctx, nil)
     if err != nil {
         return nil, err
@@ -158,7 +158,7 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) ([
     }
     defer rows.Close()
 
-    meetings := []*models.Meeting{}
+    meetings = []*models.Meeting{}
 
     for rows.Next() {
         var m models.Meeting
@@ -220,7 +220,7 @@ func doesContain(list []string, val string) bool {
     return false
 }
 
-func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) error {
+func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) (err error) {
     tx, err := pg.Db.BeginTx(ctx, nil)
     if err != nil {
         return err
@@ -304,7 +304,7 @@ func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) error {
     return err
 }
 
-func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) error {
+func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) (err error) {
     tx, err := pg.Db.BeginTx(ctx, nil)
     if err != nil {
         return err
