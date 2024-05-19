@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Anand-S23/capsule/internal/models"
@@ -26,8 +27,8 @@ func NewPgMeetingRepo(db *sql.DB) *PgMeetingRepo {
     }
 }
 
-func (pg *PgMeetingRepo) Add(m models.Meeting) (err error) {
-    tx, err := pg.Db.Begin()
+func (pg *PgMeetingRepo) Add(ctx context.Context, m models.Meeting) (err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
     if err != nil {
         return
     }
@@ -40,26 +41,26 @@ func (pg *PgMeetingRepo) Add(m models.Meeting) (err error) {
         }
     }()
 
-    meetingQuery, err := tx.Prepare("INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);")
+    meetingQuery, err := tx.PrepareContext(ctx, "INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);")
     if err != nil {
         return
     }
     defer meetingQuery.Close()
 
-    _, err = meetingQuery.Exec(m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
+    _, err = meetingQuery.ExecContext(ctx, m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
         m.Notes, m.Description, m.CreatedAt)
     if err != nil {
         return
     }
 
     for _, participant := range m.Participants {
-        participantsQuery, err := tx.Prepare("INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
+        participantsQuery, err := tx.PrepareContext(ctx, "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
         if err != nil {
             return err
         }
         defer participantsQuery.Close()
 
-        _, err = participantsQuery.Exec(m.ID, participant, m.OwnerID)
+        _, err = participantsQuery.ExecContext(ctx, m.ID, participant, m.OwnerID)
         if err != nil {
             return err
         }
@@ -68,22 +69,40 @@ func (pg *PgMeetingRepo) Add(m models.Meeting) (err error) {
     return
 }
 
-func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
-    query, err := pg.Db.Prepare("SELECT * FROM meetings WHERE id = $1;")
+func (pg *PgMeetingRepo) GetOneByID(ctx context.Context, id string) (m *models.Meeting, err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
     if err != nil {
         return nil, err
     }
-    defer query.Close()
 
-    var m models.Meeting
-    err = query.QueryRow(id).Scan(&m)
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    statement, err := tx.PrepareContext(
+        ctx, 
+        "SELECT id, owner_id, time, location, description, notes, created_at, FROM meetings WHERE id = $1;",
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer statement.Close()
+
+    err = statement.QueryRowContext(ctx, id).Scan(&m.ID, &m.OwnerID, &m.When, &m.Location, &m.Description, &m.Notes, &m.CreatedAt)
 	if err != nil {
         return nil, err
 	}
     
-    participantsQuery := "SELECT * FROM participants WHERE meeting_id = $1;"
+    pStatement, err := tx.PrepareContext(ctx, "SELECT id, meeting_id, connection_id, owner_id FROM participants WHERE meeting_id = $1;")
+    if err != nil {
+        return nil, err
+    }
 
-    rows, err := pg.Db.Query(participantsQuery, m.ID)
+    rows, err := pStatement.QueryContext(ctx, m.ID)
     if err != nil {
         return nil, err
     }
@@ -108,10 +127,9 @@ func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
     }
 
     m.Participants = participants
-    return &m, nil
+    return m, nil
 }
 
-// TODO: see if there is a way to merge the two queries together
 func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, error) {
     query := "SELECT * FROM meetings WHERE owner_id = $1;"
 
