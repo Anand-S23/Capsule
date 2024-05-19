@@ -130,10 +130,29 @@ func (pg *PgMeetingRepo) GetOneByID(ctx context.Context, id string) (m *models.M
     return m, nil
 }
 
-func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, error) {
-    query := "SELECT * FROM meetings WHERE owner_id = $1;"
+func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) ([]*models.Meeting, error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return nil, err
+    }
 
-    rows, err := pg.Db.Query(query, ownerID)
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    statement, err := tx.PrepareContext(
+        ctx, 
+        "SELECT id, owner_id, time, location, description, notes, created_at, FROM meetings WHERE owner_id = $1;",
+    )
+    if err != nil {
+        return nil, err
+    }
+
+    rows, err := statement.QueryContext(ctx, ownerID)
     if err != nil {
         return nil, err
     }
@@ -151,9 +170,12 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, err
             return nil, err
         }
 
-        pQuery := "SELECT * FROM participants WHERE meeting_id = $1;"
+        pStatement, err := tx.PrepareContext(ctx, "SELECT id, meeting_id, connection_id, owner_id FROM participants WHERE meeting_id = $1;")
+        if err != nil {
+            return nil, err
+        }
 
-        pRows, err := pg.Db.Query(pQuery, m.ID)
+        pRows, err := pStatement.QueryContext(ctx, m.ID)
         if err != nil {
             return nil, err
         }
@@ -188,7 +210,6 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, err
     return meetings, nil
 }
 
-// TODO: figure out where this should live
 func doesContain(list []string, val string) bool {
     for _, element := range list {
         if element == val {
@@ -199,10 +220,26 @@ func doesContain(list []string, val string) bool {
     return false
 }
 
-func (pg *PgMeetingRepo) Update(m models.Meeting) error {
-    query := "SELECT * FROM participants WHERE meeting_id = $1"
+func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) error {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return err
+    }
 
-    rows, err := pg.Db.Query(query, m.ID)
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    pStatement, err := tx.PrepareContext(ctx, "SELECT id, meeting_id, connection_id, owner_id FROM participants WHERE meeting_id = $1;")
+    if err != nil {
+        return err
+    }
+
+    rows, err := pStatement.QueryContext(ctx, m.ID)
     if err != nil {
         return err
     }
@@ -225,8 +262,12 @@ func (pg *PgMeetingRepo) Update(m models.Meeting) error {
 
     for _, oldParticipant := range oldParticipants {
         if !doesContain(m.Participants, oldParticipant.ConnectionID) {
-            query := "DELETE FROM participants WHERE id = $1;"
-            _, err := pg.Db.Exec(query, oldParticipant.ID)
+            pdStatement, err := tx.PrepareContext(ctx, "DELETE FROM participants WHERE id = $1;")
+            if err != nil {
+                return nil
+            }
+
+            _, err = pdStatement.ExecContext(ctx, oldParticipant.ID)
             if err != nil {
                 return err
             }
@@ -235,48 +276,69 @@ func (pg *PgMeetingRepo) Update(m models.Meeting) error {
 
     for _, participant := range m.Participants {
         if !doesContain(oldParticipantsID, participant) {
-            participantsQuery := "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);"
+            piStatement, err := tx.PrepareContext(ctx, "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
+            if err != nil {
+                return nil
+            }
 
-            _, err := pg.Db.Exec(participantsQuery, m.ID, participant, m.OwnerID)
+            _, err = piStatement.ExecContext(ctx, m.ID, participant, m.OwnerID)
             if err != nil {
                 return err
             }
         }
     }
 
-    query = `
-        UPDATE meetings
+    muStatement, err := tx.PrepareContext(ctx, 
+        `UPDATE meetings
         SET when = $2
             location = $3,
             notes = $4,
             description = $5
-        WHERE id = $1;
-    `
+        WHERE id = $1;`,
+   )
+   if err != nil {
+       return err
+   }
 
-    _, err = pg.Db.Exec(query, m.ID, m.When, m.Location, m.Notes, m.Description)
+    _, err = muStatement.ExecContext(ctx, m.ID, m.When, m.Location, m.Notes, m.Description)
     return err
 }
 
-func (pg *PgMeetingRepo) DeleteByID(id string) error {
-    query := "SELECT * FROM participants WHERE meeting_id = $1;"
+func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) error {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return err
+    }
 
-    rows, err := pg.Db.Query(query, id)
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    psStatement, err := tx.PrepareContext(ctx, "SELECT id FROM participants WHERE meeting_id = $1;")
+    if err != nil {
+        return err
+    }
+
+    rows, err := psStatement.QueryContext(ctx, id)
     if err != nil {
         return err
     }
     defer rows.Close()
 
     for rows.Next() {
-        var p models.Participant
+        var pid int
 
-        err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+        err := rows.Scan(&pid)
         if err != nil {
             return err
         }
 
-
-        deleteQuery := "DELETE FROM participant WHERE id = $1;"
-        _, err = pg.Db.Exec(deleteQuery, p.ID)
+        pdStatement, err := tx.PrepareContext(ctx, "DELETE FROM participant WHERE id = $1;")
+        _, err = pdStatement.ExecContext(ctx, pid)
         if err != nil {
             return err
         }
@@ -286,8 +348,12 @@ func (pg *PgMeetingRepo) DeleteByID(id string) error {
         return err
     }
 
-    query = "DELETE FROM meetings WHERE id = $1;"
-    _, err = pg.Db.Exec(query, id)
+    mdStatement, err := tx.PrepareContext(ctx, "DELETE FROM meetings WHERE id = $1;")
+    if err != nil {
+        return err
+    }
+
+    _, err = mdStatement.ExecContext(ctx, id)
     return err
 }
 
