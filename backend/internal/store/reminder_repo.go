@@ -8,12 +8,12 @@ import (
 )
 
 type ReminderRepo interface {
-    Add(ctx context.Context, r models.Reminder) error
-    DeleteByID(ctx context.Context, id string) error
-    GetByID(ctx context.Context, id string) error
-    GetAllByOwnerID(ctx context.Context, owner_id string) ([]*models.Reminder, error)
-    GetAllByConnectionID(ctx context.Context, owner_id string, connection_id string) ([]*models.Reminder, error)
-    Update(ctx context.Context, r models.Reminder) error
+    Add(context.Context, models.Reminder) error
+    DeleteByID(context.Context, string) error
+    GetByID(context.Context, string) error
+    GetAllByOwnerID(context.Context, string) ([]*models.Reminder, error)
+    GetAllByConnectionID(context.Context, string, string) ([]*models.Reminder, error)
+    Update(context.Context, models.Reminder) error
 }
 
 // Postgres Meeting Repo

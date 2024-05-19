@@ -8,10 +8,10 @@ import (
 )
 
 type UserRepo interface {
-    Add(user models.User) error
-    DeleteByID(id string) error
-    GetByID(id string) (*models.User, error)
-    GetByEmail(email string) (*models.User, error)
+    Add(context.Context, models.User) error
+    DeleteByID(context.Context, string) error
+    GetByID(context.Context, string) (*models.User, error)
+    GetByEmail(context.Context, string) (*models.User, error)
 }
 
 // PostgresUserRepo

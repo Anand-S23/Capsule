@@ -8,11 +8,11 @@ import (
 )
 
 type MeetingRepo interface {
-    Add(models.Meeting) error
-    GetOneByID(id string) (*models.Meeting, error)
-    GetAllByOwnerID(ownerID string) ([]*models.Meeting, error)
-    Update(c models.Meeting) error
-    DeleteByID(id string) error
+    Add(context.Context, models.Meeting) error
+    GetOneByID(context.Context, string) (*models.Meeting, error)
+    GetAllByOwnerID(context.Context, string) ([]*models.Meeting, error)
+    Update(context.Context, models.Meeting) error
+    DeleteByID(context.Context, string) error
 }
 
 // Postgres Meeting Repo
@@ -101,6 +101,7 @@ func (pg *PgMeetingRepo) GetOneByID(ctx context.Context, id string) (m *models.M
     if err != nil {
         return nil, err
     }
+    defer pStatement.Close()
 
     rows, err := pStatement.QueryContext(ctx, m.ID)
     if err != nil {
@@ -112,9 +113,7 @@ func (pg *PgMeetingRepo) GetOneByID(ctx context.Context, id string) (m *models.M
 
     for rows.Next() {
         var p models.Participant
-
         err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
-
         if err != nil {
             return nil, err
         }
@@ -151,6 +150,7 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) (m
     if err != nil {
         return nil, err
     }
+    defer statement.Close()
 
     rows, err := statement.QueryContext(ctx, ownerID)
     if err != nil {
@@ -174,6 +174,7 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) (m
         if err != nil {
             return nil, err
         }
+        pStatement.Close()
 
         pRows, err := pStatement.QueryContext(ctx, m.ID)
         if err != nil {
@@ -185,9 +186,7 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) (m
 
         for pRows.Next() {
             var p models.Participant
-
             err := pRows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
-
             if err != nil {
                 return nil, err
             }
@@ -238,20 +237,20 @@ func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) (err erro
     if err != nil {
         return err
     }
+    defer pStatement.Close()
 
     rows, err := pStatement.QueryContext(ctx, m.ID)
     if err != nil {
         return err
     }
+    defer rows.Close()
 
     var oldParticipants []models.Participant
     var oldParticipantsID []string
 
     for rows.Next() {
         var p models.Participant
-
         err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
-
         if err != nil {
             return err
         }
@@ -266,6 +265,7 @@ func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) (err erro
             if err != nil {
                 return nil
             }
+            defer pdStatement.Close()
 
             _, err = pdStatement.ExecContext(ctx, oldParticipant.ID)
             if err != nil {
@@ -280,6 +280,7 @@ func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) (err erro
             if err != nil {
                 return nil
             }
+            defer piStatement.Close()
 
             _, err = piStatement.ExecContext(ctx, m.ID, participant, m.OwnerID)
             if err != nil {
@@ -299,6 +300,7 @@ func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) (err erro
    if err != nil {
        return err
    }
+   defer muStatement.Close()
 
     _, err = muStatement.ExecContext(ctx, m.ID, m.When, m.Location, m.Notes, m.Description)
     return err
@@ -322,6 +324,7 @@ func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) (err error) 
     if err != nil {
         return err
     }
+    defer psStatement.Close()
 
     rows, err := psStatement.QueryContext(ctx, id)
     if err != nil {
@@ -338,6 +341,11 @@ func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) (err error) 
         }
 
         pdStatement, err := tx.PrepareContext(ctx, "DELETE FROM participant WHERE id = $1;")
+        if err != nil {
+            return err
+        }
+        defer pdStatement.Close()
+
         _, err = pdStatement.ExecContext(ctx, pid)
         if err != nil {
             return err
@@ -352,6 +360,7 @@ func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) (err error) 
     if err != nil {
         return err
     }
+    defer mdStatement.Close()
 
     _, err = mdStatement.ExecContext(ctx, id)
     return err

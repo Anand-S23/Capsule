@@ -8,11 +8,11 @@ import (
 )
 
 type ConnectionRepo interface {
-    Add(models.Connection) error
-    GetOneByID(id string) (*models.Connection, error)
-    GetAllByOwnerID(ownerID string) ([]*models.Connection, error)
-    Update(c models.Connection) error
-    DeleteByID(id string) error
+    Add(context.Context, models.Connection) error
+    GetOneByID(context.Context, string) (*models.Connection, error)
+    GetAllByOwnerID(context.Context, string) ([]*models.Connection, error)
+    Update(context.Context, models.Connection) error
+    DeleteByID(context.Context, string) error
 }
 
 // Postgres Connection Repo
@@ -28,17 +28,17 @@ func NewPgConnectionRepo(db *sql.DB) *PgConnectionRepo {
 }
 
 func (pg *PgConnectionRepo) Add(ctx context.Context, c models.Connection) error {
-    statment, err := pg.Db.PrepareContext(
+    statement, err := pg.Db.PrepareContext(
         ctx,
         "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);",
     )
     if err != nil {
         return err
     }
+    defer statement.Close()
 
-    _, err = statment.ExecContext(ctx, c.ID, c.OwnerID, c.FirstName, c.LastName, c.Email, c.Phone, 
+    _, err = statement.ExecContext(ctx, c.ID, c.OwnerID, c.FirstName, c.LastName, c.Email, c.Phone, 
         c.LinkedIn, c.Company, c.Dob, c.Notes, c.CreatedAt)
-
     return err
 }
 
@@ -50,6 +50,7 @@ func (pg *PgConnectionRepo) GetOneByID(ctx context.Context, id string) (*models.
     if err != nil {
         return nil, err
     }
+    defer statement.Close()
 
     row := statement.QueryRowContext(ctx, id)
     if row.Err() != nil {
@@ -67,6 +68,7 @@ func (pg *PgConnectionRepo) GetAllByOwnerID(ctx context.Context, ownerID string)
     if err != nil {
         return nil, err
     }
+    defer statement.Close()
 
     rows, err := statement.QueryContext(ctx, ownerID)
     if err != nil {
@@ -112,10 +114,10 @@ func (pg *PgConnectionRepo) Update(ctx context.Context, c models.Connection) err
     if err != nil {
         return err
     }
+    defer statement.Close()
 
     _, err = statement.ExecContext(ctx, c.ID, c.FirstName, c.LastName, 
         c.Email, c.Phone, c.LinkedIn, c.Company, c.Dob) 
-
     return err
 }
 
@@ -124,6 +126,7 @@ func (pg *PgConnectionRepo) DeleteByID(ctx context.Context, id string) error {
     if err != nil {
         return err
     }
+    defer statement.Close()
 
     _, err = statement.Exec(ctx, id)
     return err
