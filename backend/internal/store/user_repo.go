@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Anand-S23/capsule/internal/models"
@@ -25,46 +26,44 @@ func NewPgUserRepo(db *sql.DB) *PgUserRepo{
     }
 }
 
-func (pg *PgUserRepo) Add(user models.User) error {
-    stmt, err := pg.Db.Prepare(`
-        INSERT INTO users (id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);
-    `)
+func (pg *PgUserRepo) Add(ctx context.Context, user models.User) error {
+    stmt, err := pg.Db.PrepareContext(
+        ctx, 
+        `INSERT INTO users (id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`,
+    )
     if err != nil {
         return err
     }
-
     defer stmt.Close()
 
-    _, err = stmt.Exec(user.ID, user.Name, user.Email, user.Phone, user.Password, user.CreatedAt)
+    _, err = stmt.ExecContext(ctx, user.ID, user.Name, user.Email, user.Phone, user.Password, user.CreatedAt)
     return err
 }
 
-func (pg *PgUserRepo) DeleteByID(id string) error {
-    stmt, err := pg.Db.Prepare(`
-        DELETE FROM users WHERE id = $1;
-    `)
+func (pg *PgUserRepo) DeleteByID(ctx context.Context, id string) error {
+    stmt, err := pg.Db.PrepareContext(ctx, "DELETE FROM users WHERE id = $1;")
     if err != nil {
         return err
     }
-
     defer stmt.Close()
 
-    _, err = stmt.Exec(id)
+    _, err = stmt.ExecContext(ctx, id)
     return err
 }
 
-func (pg *PgUserRepo) GetByID(id string) (*models.User, error) {
-    stmt, err := pg.Db.Prepare(`
-        SELECT id, name, email, phone, password, created_at FROM users WHERE id = $1;
-    `)
+func (pg *PgUserRepo) GetByID(ctx context.Context, id string) (*models.User, error) {
+    stmt, err := pg.Db.PrepareContext(
+        ctx,
+        "SELECT id, name, email, phone, password, created_at FROM users WHERE id = $1;",
+    )
 	if err != nil {
         return nil, err
 	}
 	defer stmt.Close()
 
 	var user models.User
-	err = stmt.QueryRow(id).Scan(&user.ID, &user.Name, &user.Email, &user.Phone, &user.Password, &user.CreatedAt)
+	err = stmt.QueryRowContext(ctx, id).Scan(&user.ID, &user.Name, &user.Email, &user.Phone, &user.Password, &user.CreatedAt)
 	if err != nil {
         return nil, err
 	}
@@ -72,17 +71,18 @@ func (pg *PgUserRepo) GetByID(id string) (*models.User, error) {
     return &user, nil
 }
 
-func (pg *PgUserRepo) GetByEmail(email string) (*models.User, error) {
-    stmt, err := pg.Db.Prepare(`
-        SELECT id, name, email, phone, password, created_at FROM users WHERE email = $1;
-    `)
+func (pg *PgUserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
+    stmt, err := pg.Db.PrepareContext(
+        ctx,
+        "SELECT id, name, email, phone, password, created_at FROM users WHERE email = $1;",
+    )
 	if err != nil {
         return nil, err
 	}
 	defer stmt.Close()
 
 	var user models.User
-	err = stmt.QueryRow(email).Scan(&user.ID, &user.Name, &user.Email, &user.Phone, &user.Password, &user.CreatedAt)
+	err = stmt.QueryRowContext(ctx, email).Scan(&user.ID, &user.Name, &user.Email, &user.Phone, &user.Password, &user.CreatedAt)
 	if err != nil {
         return nil, err
 	}
