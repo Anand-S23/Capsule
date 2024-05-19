@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Anand-S23/capsule/internal/models"
@@ -26,40 +27,54 @@ func NewPgConnectionRepo(db *sql.DB) *PgConnectionRepo {
     }
 }
 
-func (pg *PgConnectionRepo) Add(c models.Connection) error {
-    query := "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);"
+func (pg *PgConnectionRepo) Add(ctx context.Context, c models.Connection) error {
+    statment, err := pg.Db.PrepareContext(
+        ctx,
+        "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);",
+    )
+    if err != nil {
+        return err
+    }
 
-    _, err := pg.Db.Exec(query, c.ID, c.OwnerID, c.FirstName, c.LastName, c.Email, c.Phone, 
+    _, err = statment.ExecContext(ctx, c.ID, c.OwnerID, c.FirstName, c.LastName, c.Email, c.Phone, 
         c.LinkedIn, c.Company, c.Dob, c.Notes, c.CreatedAt)
 
     return err
 }
 
-func (pg *PgConnectionRepo) GetOneByID(id string) (*models.Connection, error) {
-    query := "SELECT * FROM connections WHERE id = $1;"
+func (pg *PgConnectionRepo) GetOneByID(ctx context.Context, id string) (*models.Connection, error) {
+    statement, err := pg.Db.PrepareContext(
+        ctx, 
+        "SELECT id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at FROM connections WHERE id = $1;",
+    )
+    if err != nil {
+        return nil, err
+    }
 
-    row := pg.Db.QueryRow(query, id)
+    row := statement.QueryRowContext(ctx, id)
     if row.Err() != nil {
         return nil, row.Err()
     }
 
     var c models.Connection
-    row.Scan(&c)
+    row.Scan(&c.ID, &c.OwnerID, &c.FirstName, &c.LastName, &c.Email, &c.Phone, &c.LinkedIn, &c.Company, &c.Dob, &c.Notes, &c.CreatedAt)
 
     return &c, nil
 }
 
-func (pg *PgConnectionRepo) GetAllByOwnerID(ownerID string) ([]*models.Connection, error) {
-    query := "SELECT * FROM connections WHERE owner_id = $1;"
+func (pg *PgConnectionRepo) GetAllByOwnerID(ctx context.Context, ownerID string) ([]*models.Connection, error) {
+    statement, err := pg.Db.PrepareContext(ctx, "SELECT * FROM connections WHERE owner_id = $1;")
+    if err != nil {
+        return nil, err
+    }
 
-    rows, err := pg.Db.Query(query, ownerID)
+    rows, err := statement.QueryContext(ctx, ownerID)
     if err != nil {
         return nil, err
     }
     defer rows.Close()
 
     connections := []*models.Connection{}
-
     for rows.Next() {
         var c models.Connection
 
@@ -81,9 +96,10 @@ func (pg *PgConnectionRepo) GetAllByOwnerID(ownerID string) ([]*models.Connectio
     return connections, nil
 }
 
-func (pg *PgConnectionRepo) Update(c models.Connection) error {
-    query := `
-        UPDATE connections
+func (pg *PgConnectionRepo) Update(ctx context.Context, c models.Connection) error {
+    statement, err := pg.Db.PrepareContext(
+        ctx, 
+        `UPDATE connections
         SET first_name = $2
             last_name = $3,
             email = $4,
@@ -91,19 +107,25 @@ func (pg *PgConnectionRepo) Update(c models.Connection) error {
             linkedin = $6,
             company = $7,
             dob = $8
-        WHERE id = $1;
-    `
+        WHERE id = $1;`,
+    )
+    if err != nil {
+        return err
+    }
 
-    _, err := pg.Db.Exec(query, c.ID, c.FirstName, c.LastName, 
+    _, err = statement.ExecContext(ctx, c.ID, c.FirstName, c.LastName, 
         c.Email, c.Phone, c.LinkedIn, c.Company, c.Dob) 
 
     return err
 }
 
-func (pg *PgConnectionRepo) DeleteByID(id string) error {
-    query := "DELETE FROM connections WHERE id = $1;"
+func (pg *PgConnectionRepo) DeleteByID(ctx context.Context, id string) error {
+    statement, err := pg.Db.PrepareContext(ctx, "DELETE FROM connections WHERE id = $1;")
+    if err != nil {
+        return err
+    }
 
-    _, err := pg.Db.Exec(query, id)
+    _, err = statement.Exec(ctx, id)
     return err
 }
 
