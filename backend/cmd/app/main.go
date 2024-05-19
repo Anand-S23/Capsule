@@ -17,7 +17,12 @@ func main() {
     }
 
     db := store.InitDB(env.DB_URI, env.PRODUCTION)
-    store := store.NewStore(store.NewPgUserRepo(db), store.NewPgConnectionRepo(db))
+    store := store.NewStore(
+        store.NewPgUserRepo(db), 
+        store.NewPgConnectionRepo(db),
+        store.NewPgMeetingRepo(db),
+        store.NewPgReminderRepo(db),
+    )
 
     controller := controller.NewController(store, env.JWT_SECRET, env.COOKIE_HASH_KEY, env.COOKIE_BLOCK_KEY, env.PRODUCTION)
 
