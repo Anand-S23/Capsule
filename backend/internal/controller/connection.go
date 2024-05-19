@@ -20,7 +20,7 @@ func (c *Controller) CreateConnection(w http.ResponseWriter, r *http.Request) er
     // TODO: Validation on create connection data 
 
     connection := models.NewConnection(connectionData, currentUserID)
-    err = c.store.ConnectionRepo.Add(connection)
+    err = c.store.ConnectionRepo.Add(c.Ctx, connection)
     if err != nil {
         log.Println("Error while creating connection :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))
@@ -37,7 +37,7 @@ func (c *Controller) GetConnection(w http.ResponseWriter, r *http.Request) error
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Could not parse id from path"))
     }
 
-    connection, err := c.store.ConnectionRepo.GetOneByID(id)
+    connection, err := c.store.ConnectionRepo.GetOneByID(c.Ctx, id)
     if err != nil {
         log.Println("Error while getting connection by id :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))
@@ -53,7 +53,7 @@ func (c *Controller) GetConnection(w http.ResponseWriter, r *http.Request) error
 func (c *Controller) GetAllConnections(w http.ResponseWriter, r *http.Request) error {
     currentUserID := r.Context().Value("user_id").(string)
 
-    connections, err := c.store.ConnectionRepo.GetAllByOwnerID(currentUserID)
+    connections, err := c.store.ConnectionRepo.GetAllByOwnerID(c.Ctx, currentUserID)
     if err != nil {
         log.Println("Error while getting connection by id :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))
@@ -70,7 +70,7 @@ func (c *Controller) UpdateConnection(w http.ResponseWriter, r *http.Request) er
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Could not parse id from path"))
     }
 
-    connectionFromID, err := c.store.ConnectionRepo.GetOneByID(id)
+    connectionFromID, err := c.store.ConnectionRepo.GetOneByID(c.Ctx, id)
     if err != nil {
         log.Println("Error while getting connection by id :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))
@@ -89,7 +89,7 @@ func (c *Controller) UpdateConnection(w http.ResponseWriter, r *http.Request) er
     // TODO: Validation on create connection data 
 
     connection := models.NewConnectionWithID(connectionData, currentUserID, id)
-    err = c.store.ConnectionRepo.Update(connection)
+    err = c.store.ConnectionRepo.Update(c.Ctx, connection)
     if err != nil {
         log.Println("Error while creating connection :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))
@@ -106,7 +106,7 @@ func (c *Controller) DeleteConnection(w http.ResponseWriter, r *http.Request) er
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Could not parse id from path"))
     }
 
-    connection, err := c.store.ConnectionRepo.GetOneByID(id)
+    connection, err := c.store.ConnectionRepo.GetOneByID(c.Ctx, id)
     if err != nil {
         log.Println("Error while getting connection by id :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))
@@ -116,7 +116,7 @@ func (c *Controller) DeleteConnection(w http.ResponseWriter, r *http.Request) er
         return WriteJSON(w, http.StatusUnauthorized, ErrMsg("Unauthorized"))
     }
 
-    err = c.store.ConnectionRepo.DeleteByID(id)
+    err = c.store.ConnectionRepo.DeleteByID(c.Ctx, id)
     if err != nil {
         log.Println("Error while deleting connection by id :: ", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error, please try again later"))

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/Anand-S23/capsule/internal/store"
@@ -8,14 +9,16 @@ import (
 )
 
 type Controller struct {
+    Ctx          context.Context
     store        *store.Store
     production   bool
     JwtSecretKey []byte
     CookieSecret *securecookie.SecureCookie
 }
 
-func NewController(store *store.Store, secretKey []byte, cookieHashKey []byte, cookieBlockKey []byte, production bool) *Controller {
+func NewController(ctx context.Context, store *store.Store, secretKey []byte, cookieHashKey []byte, cookieBlockKey []byte, production bool) *Controller {
     return &Controller {
+        Ctx: ctx,
         store: store,
         production: production,
         JwtSecretKey: secretKey,
