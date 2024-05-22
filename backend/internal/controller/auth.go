@@ -35,7 +35,7 @@ func (c *Controller) Register(w http.ResponseWriter, r *http.Request) error {
     userData.Password = string(hashedPassword)
 
     user := models.NewUser(userData)
-    err = c.store.UserRepo.Add(user)
+    err = c.store.UserRepo.Add(c.Ctx, user)
     if err != nil {
         log.Printf("Error storing the password in the database, %s\n", err)
         return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error occured, please try again later"))
@@ -57,7 +57,7 @@ func (c *Controller) Login(w http.ResponseWriter, r *http.Request) error {
         return WriteJSON(w, http.StatusBadRequest, ErrMsg("Could not parse login data"))
     }
 
-    user, err := c.store.UserRepo.GetByEmail(loginData.Email)
+    user, err := c.store.UserRepo.GetByEmail(c.Ctx, loginData.Email)
     if user == nil || user.ID == "" || err != nil {
         if err == sql.ErrNoRows {
             log.Println("Could not get user by email from database, does not exist")

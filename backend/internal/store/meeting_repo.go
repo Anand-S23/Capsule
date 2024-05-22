@@ -1,17 +1,18 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/Anand-S23/capsule/internal/models"
 )
 
 type MeetingRepo interface {
-    Add(models.Meeting) error
-    GetOneByID(id string) (*models.Meeting, error)
-    GetAllByOwnerID(ownerID string) ([]*models.Meeting, error)
-    Update(c models.Meeting) error
-    DeleteByID(id string) error
+    Add(context.Context, models.Meeting) error
+    GetOneByID(context.Context, string) (*models.Meeting, error)
+    GetAllByOwnerID(context.Context, string) ([]*models.Meeting, error)
+    Update(context.Context, models.Meeting) error
+    DeleteByID(context.Context, string) error
 }
 
 // Postgres Meeting Repo
@@ -26,50 +27,138 @@ func NewPgMeetingRepo(db *sql.DB) *PgMeetingRepo {
     }
 }
 
-func (pg *PgMeetingRepo) Add(m models.Meeting) error {
-    meetingQuery := "INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);"
+func (pg *PgMeetingRepo) Add(ctx context.Context, m models.Meeting) (err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return
+    }
 
-    _, err := pg.Db.Exec(meetingQuery, m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    meetingQuery, err := tx.PrepareContext(ctx, "INSERT INTO meetings VALUES ($1, $2, $3, $4, $5, $6, $7, $8);")
+    if err != nil {
+        return
+    }
+    defer meetingQuery.Close()
+
+    _, err = meetingQuery.ExecContext(ctx, m.ID, m.OwnerID, m.When, m.Location, m.MeetingType, 
         m.Notes, m.Description, m.CreatedAt)
+    if err != nil {
+        return
+    }
 
     for _, participant := range m.Participants {
-        participantsQuery := "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);"
+        participantsQuery, err := tx.PrepareContext(ctx, "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
+        if err != nil {
+            return err
+        }
+        defer participantsQuery.Close()
 
-        _, err := pg.Db.Exec(participantsQuery, m.ID, participant, m.OwnerID)
+        _, err = participantsQuery.ExecContext(ctx, m.ID, participant, m.OwnerID)
         if err != nil {
             return err
         }
     }
 
-    return err
+    return
 }
 
-// TODO: Get Participants for the meeting
-func (pg *PgMeetingRepo) GetOneByID(id string) (*models.Meeting, error) {
-    query := "SELECT * FROM meetings WHERE id = $1;"
-
-    row := pg.Db.QueryRow(query, id)
-    if row.Err() != nil {
-        return nil, row.Err()
+func (pg *PgMeetingRepo) GetOneByID(ctx context.Context, id string) (m *models.Meeting, err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return nil, err
     }
 
-    var m models.Meeting
-    row.Scan(&m)
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
 
-    return &m, nil
-}
+    statement, err := tx.PrepareContext(
+        ctx, 
+        "SELECT id, owner_id, time, location, description, notes, created_at, FROM meetings WHERE id = $1;",
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer statement.Close()
 
-// TODO: Get Participants for each all meetings
-func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, error) {
-    query := "SELECT * FROM meetings WHERE owner_id = $1;"
+    err = statement.QueryRowContext(ctx, id).Scan(&m.ID, &m.OwnerID, &m.When, &m.Location, &m.Description, &m.Notes, &m.CreatedAt)
+	if err != nil {
+        return nil, err
+	}
+    
+    pStatement, err := tx.PrepareContext(ctx, "SELECT id, meeting_id, connection_id, owner_id FROM participants WHERE meeting_id = $1;")
+    if err != nil {
+        return nil, err
+    }
+    defer pStatement.Close()
 
-    rows, err := pg.Db.Query(query, ownerID)
+    rows, err := pStatement.QueryContext(ctx, m.ID)
     if err != nil {
         return nil, err
     }
     defer rows.Close()
 
-    meetings := []*models.Meeting{}
+    participants := []string{}
+
+    for rows.Next() {
+        var p models.Participant
+        err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+        if err != nil {
+            return nil, err
+        }
+
+        participants = append(participants, p.ConnectionID)
+    }
+
+    if err := rows.Err(); err != nil {
+        return nil, err
+    }
+
+    m.Participants = participants
+    return m, nil
+}
+
+func (pg *PgMeetingRepo) GetAllByOwnerID(ctx context.Context, ownerID string) (meetings []*models.Meeting, err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return nil, err
+    }
+
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    statement, err := tx.PrepareContext(
+        ctx, 
+        "SELECT id, owner_id, time, location, description, notes, created_at, FROM meetings WHERE owner_id = $1;",
+    )
+    if err != nil {
+        return nil, err
+    }
+    defer statement.Close()
+
+    rows, err := statement.QueryContext(ctx, ownerID)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    meetings = []*models.Meeting{}
 
     for rows.Next() {
         var m models.Meeting
@@ -81,6 +170,35 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, err
             return nil, err
         }
 
+        pStatement, err := tx.PrepareContext(ctx, "SELECT id, meeting_id, connection_id, owner_id FROM participants WHERE meeting_id = $1;")
+        if err != nil {
+            return nil, err
+        }
+        pStatement.Close()
+
+        pRows, err := pStatement.QueryContext(ctx, m.ID)
+        if err != nil {
+            return nil, err
+        }
+        defer pRows.Close()
+
+        participants := []string{}
+
+        for pRows.Next() {
+            var p models.Participant
+            err := pRows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+            if err != nil {
+                return nil, err
+            }
+
+            participants = append(participants, p.ConnectionID)
+        }
+
+        if err := pRows.Err(); err != nil {
+            return nil, err
+        }
+
+        m.Participants = participants
         meetings = append(meetings, &m)
     }
 
@@ -91,27 +209,160 @@ func (pg *PgMeetingRepo) GetAllByOwnerID(ownerID string) ([]*models.Meeting, err
     return meetings, nil
 }
 
-// TODO: Get Participants, compare new update list and make neccessary changes - deleting or adding new participant
-func (pg *PgMeetingRepo) Update(m models.Meeting) error {
-    query := `
-        UPDATE meetings
+func doesContain(list []string, val string) bool {
+    for _, element := range list {
+        if element == val {
+            return true
+        }
+    }
+
+    return false
+}
+
+func (pg *PgMeetingRepo) Update(ctx context.Context, m models.Meeting) (err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return err
+    }
+
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    pStatement, err := tx.PrepareContext(ctx, "SELECT id, meeting_id, connection_id, owner_id FROM participants WHERE meeting_id = $1;")
+    if err != nil {
+        return err
+    }
+    defer pStatement.Close()
+
+    rows, err := pStatement.QueryContext(ctx, m.ID)
+    if err != nil {
+        return err
+    }
+    defer rows.Close()
+
+    var oldParticipants []models.Participant
+    var oldParticipantsID []string
+
+    for rows.Next() {
+        var p models.Participant
+        err := rows.Scan(&p.ID, &p.MeetingID, &p.ConnectionID, &p.OwnerID)
+        if err != nil {
+            return err
+        }
+
+        oldParticipants = append(oldParticipants, p)
+        oldParticipantsID = append(oldParticipantsID, p.ConnectionID)
+    }
+
+    for _, oldParticipant := range oldParticipants {
+        if !doesContain(m.Participants, oldParticipant.ConnectionID) {
+            pdStatement, err := tx.PrepareContext(ctx, "DELETE FROM participants WHERE id = $1;")
+            if err != nil {
+                return nil
+            }
+            defer pdStatement.Close()
+
+            _, err = pdStatement.ExecContext(ctx, oldParticipant.ID)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    for _, participant := range m.Participants {
+        if !doesContain(oldParticipantsID, participant) {
+            piStatement, err := tx.PrepareContext(ctx, "INSERT INTO participants (meeting_id, connection_id, owner_id) VALUES ($1, $2, $3);")
+            if err != nil {
+                return nil
+            }
+            defer piStatement.Close()
+
+            _, err = piStatement.ExecContext(ctx, m.ID, participant, m.OwnerID)
+            if err != nil {
+                return err
+            }
+        }
+    }
+
+    muStatement, err := tx.PrepareContext(ctx, 
+        `UPDATE meetings
         SET when = $2
             location = $3,
             notes = $4,
             description = $5
-        WHERE id = $1;
-    `
+        WHERE id = $1;`,
+   )
+   if err != nil {
+       return err
+   }
+   defer muStatement.Close()
 
-    _, err := pg.Db.Exec(query, m.ID, m.When, m.Location, m.Notes, m.Description)
-
+    _, err = muStatement.ExecContext(ctx, m.ID, m.When, m.Location, m.Notes, m.Description)
     return err
 }
 
-// TODO: Delete Participants with the same id
-func (pg *PgMeetingRepo) DeleteByID(id string) error {
-    query := "DELETE FROM meetings WHERE id = $1;"
+func (pg *PgMeetingRepo) DeleteByID(ctx context.Context, id string) (err error) {
+    tx, err := pg.Db.BeginTx(ctx, nil)
+    if err != nil {
+        return err
+    }
 
-    _, err := pg.Db.Exec(query, id)
+    defer func() {
+        if err != nil {
+            tx.Rollback()
+        } else {
+            err = tx.Commit()
+        }
+    }()
+
+    psStatement, err := tx.PrepareContext(ctx, "SELECT id FROM participants WHERE meeting_id = $1;")
+    if err != nil {
+        return err
+    }
+    defer psStatement.Close()
+
+    rows, err := psStatement.QueryContext(ctx, id)
+    if err != nil {
+        return err
+    }
+    defer rows.Close()
+
+    for rows.Next() {
+        var pid int
+
+        err := rows.Scan(&pid)
+        if err != nil {
+            return err
+        }
+
+        pdStatement, err := tx.PrepareContext(ctx, "DELETE FROM participant WHERE id = $1;")
+        if err != nil {
+            return err
+        }
+        defer pdStatement.Close()
+
+        _, err = pdStatement.ExecContext(ctx, pid)
+        if err != nil {
+            return err
+        }
+    }
+
+    if err := rows.Err(); err != nil {
+        return err
+    }
+
+    mdStatement, err := tx.PrepareContext(ctx, "DELETE FROM meetings WHERE id = $1;")
+    if err != nil {
+        return err
+    }
+    defer mdStatement.Close()
+
+    _, err = mdStatement.ExecContext(ctx, id)
     return err
 }
 

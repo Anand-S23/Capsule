@@ -1,12 +1,14 @@
 package validators
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"net/mail"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/Anand-S23/capsule/internal/models"
@@ -22,13 +24,13 @@ const (
 )
 
 var (
-    ErrorNameNonAlpha error = errors.New("Name must only contain letter")
-    ErrorNameTooLong error = errors.New("Name entered is not valid too long")
-    ErrorEmailInvalid error = errors.New("Email entered is not valid")
-    ErrorEmailExists error = errors.New("User already exsits with that email")
-    ErrorPhoneNumberInvalid error = errors.New("Phone number is not valid")
-    ErrorPasswordMismatch error = errors.New("Passwords do not match")
-    ErrorPasswordIncorrectLenght error = errors.New(fmt.Sprintf("Password must be between %d and %d characters long", MIN_PASSWORD_LENGHT, MAX_PASSWORD_LENGTH))
+    ErrorNameNonAlpha error = errors.New("name must only contain letter")
+    ErrorNameTooLong error = errors.New("name entered is not valid too long")
+    ErrorEmailInvalid error = errors.New("email entered is not valid")
+    ErrorEmailExists error = errors.New("user already exsits with that email")
+    ErrorPhoneNumberInvalid error = errors.New("phone number is not valid")
+    ErrorPasswordMismatch error = errors.New("passwords do not match")
+    ErrorPasswordIncorrectLenght error = errors.New(fmt.Sprintf("password must be between %d and %d characters long", MIN_PASSWORD_LENGHT, MAX_PASSWORD_LENGTH))
 )
 
 func AuthValidator(userData models.RegisterDto, store *store.Store) map[string]string {
@@ -84,9 +86,12 @@ func ValidateEmail(email string, store *store.Store) error {
         return ErrorEmailInvalid
     }
 
-    user, err := store.UserRepo.GetByEmail(email)
+    ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+    defer cancel()
+
+    user, err := store.UserRepo.GetByEmail(ctx, email)
     if err != nil && err != sql.ErrNoRows {
-        return errors.New("Internal server error, please try again later")
+        return errors.New("internal server error, please try again later")
     } else if user != nil && user.ID != "" && err != sql.ErrNoRows {
         return ErrorEmailExists
     }

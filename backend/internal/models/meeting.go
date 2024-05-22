@@ -6,6 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type Participant struct {
+    ID           int
+    MeetingID    string
+    ConnectionID string
+    OwnerID      string
+}
+
 type MeetingDto struct {
     When         time.Time
     Location     string

@@ -16,7 +16,7 @@ import (
 func getUserFromResquest(r *http.Request, jwtSecretKey []byte, cookieSecret *securecookie.SecureCookie) (*auth.Claims, error) {
     tokenString, err := auth.ParseCookie(r, cookieSecret, auth.COOKIE_NAME)
 	if err != nil {
-        errMsg := fmt.Sprintf("Invalid request, could not parse cookie: %s", err)
+        errMsg := fmt.Sprintf("invalid request, could not parse cookie: %s", err)
         return nil, errors.New(errMsg)
 	}
 
@@ -24,13 +24,13 @@ func getUserFromResquest(r *http.Request, jwtSecretKey []byte, cookieSecret *sec
 		return jwtSecretKey, nil
 	})
 	if err != nil {
-        errMsg := fmt.Sprintf("Invalid cookie, could not parse token: %s", err)
+        errMsg := fmt.Sprintf("invalid cookie, could not parse token: %s", err)
         return nil, errors.New(errMsg)
 	}
     
 	claims, ok := token.Claims.(*auth.Claims)
 	if !ok || !token.Valid {
-        return nil, errors.New("Invalid token, not able to parse claims")
+        return nil, errors.New("invalid token, not able to parse claims")
 	}
 
     return claims, nil
