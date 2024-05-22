@@ -94,18 +94,19 @@ func (pg *PgUserRepo) GetByEmail(ctx context.Context, email string) (*models.Use
 
 type MockUserRepo struct {}
 
-func (mr *MockUserRepo) Add(user models.User) error {
+func (mr *MockUserRepo) Add(ctx context.Context, user models.User) error {
     return nil
 }
 
-func (mr *MockUserRepo) DeleteByID(id string) error {
+func (mr *MockUserRepo) DeleteByID(ctx context.Context, id string) error {
     return nil
 }
 
-func (mr *MockUserRepo) GetByID(id string) (*models.User, error) {
+func (mr *MockUserRepo) GetByID(ctx context.Context, id string) (*models.User, error) {
     return nil, nil
 }
 
-func (mr *MockUserRepo) GetByEmail(email string) (*models.User, error) {
+func (mr *MockUserRepo) GetByEmail(ctx context.Context, email string) (*models.User, error) {
     return nil, nil
 }
+

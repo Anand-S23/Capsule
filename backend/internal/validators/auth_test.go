@@ -1,12 +1,13 @@
 package validators
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Anand-S23/capsule/internal/store"
 )
 
-var mockStore *store.Store = store.NewStore(&store.MockUserRepo{}) 
+var mockStore *store.Store = store.NewStore(&store.MockUserRepo{}, nil, nil, nil) 
 
 func TestValidateName(t *testing.T) {
     t.Run("Valid Name", func(t *testing.T) {
@@ -44,7 +45,7 @@ func TestValidateEmail(t *testing.T) {
     t.Run("Valid Email", func(t *testing.T) {
         email := "testUser@email.com"
 
-        err := ValidateEmail(email, mockStore)
+        err := ValidateEmail(context.TODO(), email, mockStore)
         if err != nil {
             t.Error("Should have been nil but got ", err)
         }
@@ -53,7 +54,7 @@ func TestValidateEmail(t *testing.T) {
     t.Run("Invalid Email", func(t *testing.T) {
         email := "email"
 
-        err := ValidateEmail(email, mockStore)
+        err := ValidateEmail(context.TODO(), email, mockStore)
         if err != ErrorEmailInvalid {
             t.Error("Should have been ErrorEmailInvalid but got ", err)
         }
