@@ -5,6 +5,7 @@ import { AUTH_USER_ENDPOINT, LOGOUT_ENDPOINT } from "@/lib/consts";
 import { LoaderIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ProfileDropdown } from "./profile_dropdown";
 
 export const AuthButton = () => {
 
@@ -67,7 +68,7 @@ export const AuthButton = () => {
             }
 
             { userID !== '' && 
-                <></>
+                <ProfileDropdown username="TODO" />
             }
         </div>
     );

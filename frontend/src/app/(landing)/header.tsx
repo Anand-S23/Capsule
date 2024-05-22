@@ -4,6 +4,7 @@ import { MenuIcon, XIcon } from "lucide-react";
 import { AuthButton } from "./auth_button";
 import { NavLink, NavLinkButton } from "./navlink";
 import { useState } from "react";
+import { ProfileDropdown } from "./profile_dropdown";
 
 export type LinkType = {
     title: string;
@@ -22,16 +23,16 @@ export const Header = () => {
     const [open, setOpen] = useState<boolean>(false);
 
     return (
-        <header className="h-20 w-full border-b-2 border-slate-200">
+        <header className="h-16 w-full border-b-2 border-slate-200">
             <nav className="lg:max-w-screen-2xl mx-auto flex items-center justify-between h-full px-4">
-                <div className="pt-8 pl-4 pb-7 flex items-center gap-x-3">
-                    <button className="bg-violet-600 h-10 w-10"></button>
-                    <h1 className="text-2xl font-extrabold hidden md:block">
+                <div className="pl-2 flex items-center gap-x-3">
+                    <button className="bg-violet-600 h-10 w-10 hidden sm:block"></button>
+                    <h1 className="text-2xl font-extrabold">
                         Capsule
                     </h1>
                 </div>
 
-                <div className="pt-8 pb-7 lg:flex hidden items-center justify-between gap-x-8">
+                <div className="lg:flex hidden items-center justify-between gap-x-8">
                     { links.map((link: LinkType, idx: number) =>
                             <NavLink 
                                 key={idx}
