@@ -4,7 +4,6 @@ import { MenuIcon, XIcon } from "lucide-react";
 import { AuthButton } from "./auth_button";
 import { NavLink, NavLinkButton } from "./navlink";
 import { useState } from "react";
-import { ProfileDropdown } from "./profile_dropdown";
 
 export type LinkType = {
     title: string;
@@ -68,3 +67,4 @@ export const Header = () => {
         </header>
     );
 }
+

@@ -1,17 +1,21 @@
 'use client';
 
 import { Button } from "@/components/ui/button";
-import { AUTH_USER_ENDPOINT, LOGOUT_ENDPOINT } from "@/lib/consts";
+import { AUTH_USER_ENDPOINT } from "@/lib/consts";
 import { LoaderIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ProfileDropdown } from "./profile_dropdown";
 
-export const AuthButton = () => {
+interface AuthUser {
+    ID: string;
+    Name: string;
+}
 
+export const AuthButton = () => {
     const router = useRouter();
 
-    const [userID, setUserID] = useState<string>('');
+    const [user, setUser] = useState<AuthUser>({ ID: '', Name: ''});
     const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
     useEffect(() => {
@@ -24,10 +28,11 @@ export const AuthButton = () => {
             });
 
             if (!response.ok) {
-                setUserID('');
+                setUser({ ID: '', Name: '' });
             } else {
-                const userID: string = await response.json();
-                setUserID(userID);
+                const authUser: AuthUser = await response.json() as AuthUser;
+                console.log(authUser);
+                setUser(authUser);
             }
 
             setIsLoaded(true);
@@ -35,17 +40,6 @@ export const AuthButton = () => {
 
         doAuth();
     }, []);
-
-    const logout = async () => {
-        await fetch(LOGOUT_ENDPOINT, {
-            method: "POST",
-            mode: "cors",
-            headers: { "Content-Type": "application/json" },
-            credentials: 'include'
-        });
-
-        router.push('/');
-    }
 
     if (!isLoaded) {
         return (
@@ -55,7 +49,7 @@ export const AuthButton = () => {
 
     return (
         <div>
-            { userID === '' &&
+            { user.ID === '' &&
                 <div className="flex items-center justify-between gap-x-3">
                     <Button variant="outline" onClick={() => router.push("/login")}>
                         Login
@@ -67,8 +61,8 @@ export const AuthButton = () => {
                 </div>
             }
 
-            { userID !== '' && 
-                <ProfileDropdown username="TODO" />
+            { user.ID !== '' && 
+                <ProfileDropdown username={user.Name} />
             }
         </div>
     );

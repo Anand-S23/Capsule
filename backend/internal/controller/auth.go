@@ -101,8 +101,23 @@ func (c *Controller) Logout(w http.ResponseWriter, r *http.Request) error {
     return WriteJSON(w, http.StatusOK, "")
 }
 
-func (c *Controller) GetAuthUserID(w http.ResponseWriter, r *http.Request) error {
+func (c *Controller) GetAuthUser(w http.ResponseWriter, r *http.Request) error {
+    type Result struct {
+        UserID   string
+        UserName string
+    }
+
     currentUserID := r.Context().Value("user_id").(string)
-    return WriteJSON(w, http.StatusOK, currentUserID)
+    user, err := c.store.UserRepo.GetByID(c.Ctx, currentUserID)
+    if err != nil {
+        return WriteJSON(w, http.StatusInternalServerError, ErrMsg("Internal server error occured, please try again later"))
+    }
+
+    result := Result {
+        UserID: currentUserID,
+        UserName: user.Name,
+    }
+
+    return WriteJSON(w, http.StatusOK, result)
 }
 

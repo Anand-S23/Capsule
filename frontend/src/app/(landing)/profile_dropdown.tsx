@@ -18,12 +18,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { LOGIN_ENDPOINT } from "@/lib/consts";
+import { useRouter } from "next/navigation";
 
 type ProfileDropdownProps = {
     username: string;
 }
 
 export const ProfileDropdown = ({ username }: ProfileDropdownProps) => {
+    const router = useRouter();
+
+    const logout = async () => {
+        await fetch(LOGIN_ENDPOINT, {
+            method: "POST",
+            mode: "cors",
+            headers: { "Content-Type": "application/json" },
+            credentials: 'include'
+        });
+
+        router.push('/');
+    }
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -68,7 +83,7 @@ export const ProfileDropdown = ({ username }: ProfileDropdownProps) => {
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                 </DropdownMenuItem>
