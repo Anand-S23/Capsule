@@ -29,8 +29,7 @@ func NewPgUserRepo(db *sql.DB) *PgUserRepo{
 func (pg *PgUserRepo) Add(ctx context.Context, user models.User) error {
     stmt, err := pg.Db.PrepareContext(
         ctx, 
-        `INSERT INTO users (id, owner_id, first_name, last_name, email, phone, linkedin, company, dob, notes, created_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`,
+        `INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6);`,
     )
     if err != nil {
         return err

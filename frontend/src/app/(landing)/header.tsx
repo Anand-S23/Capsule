@@ -1,7 +1,7 @@
 'use client';
 
 import { MenuIcon, XIcon } from "lucide-react";
-import { AuthButton } from "./auth_button";
+import { AuthButton } from "./auth-button";
 import { NavLink, NavLinkButton } from "./navlink";
 import { useState } from "react";
 
@@ -45,8 +45,8 @@ export const Header = () => {
                     <AuthButton />
 
                     <button className="px-4 lg:hidden" onClick={() => setOpen(!open)}>
-                        {open && <XIcon w-8 h-8 />}
-                        {!open && <MenuIcon w-8 h-8 />}
+                        {open && <XIcon />}
+                        {!open && <MenuIcon />}
                     </button>
                 </div>
             </nav>

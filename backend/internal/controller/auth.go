@@ -118,6 +118,8 @@ func (c *Controller) GetAuthUser(w http.ResponseWriter, r *http.Request) error {
         UserName: user.Name,
     }
 
+    log.Println("Auth User: ", currentUserID)
+    log.Println("Auth User Details: ", user.Name, user.Email, user.Phone)
     return WriteJSON(w, http.StatusOK, result)
 }
 

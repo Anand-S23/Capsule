@@ -30,7 +30,7 @@ func NewPgConnectionRepo(db *sql.DB) *PgConnectionRepo {
 func (pg *PgConnectionRepo) Add(ctx context.Context, c models.Connection) error {
     statement, err := pg.Db.PrepareContext(
         ctx,
-        "INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);",
+        "INSERT INTO connections VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);",
     )
     if err != nil {
         return err

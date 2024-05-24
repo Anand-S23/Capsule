@@ -26,7 +26,7 @@ func main() {
         store.NewPgReminderRepo(db),
     )
 
-    ctxTimeout := 5 * time.Second
+    ctxTimeout := time.Second * 10
     ctx, cancel := context.WithTimeout(context.Background(), ctxTimeout)
     defer cancel()
 

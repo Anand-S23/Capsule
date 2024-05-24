@@ -5,7 +5,7 @@ import { AUTH_USER_ENDPOINT } from "@/lib/consts";
 import { LoaderIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { ProfileDropdown } from "./profile_dropdown";
+import { ProfileDropdown } from "./profile-dropdown";
 
 interface AuthUser {
     ID: string;
@@ -43,7 +43,7 @@ export const AuthButton = () => {
 
     if (!isLoaded) {
         return (
-            <LoaderIcon w-8 h-8 className="animate-spin"/>
+            <LoaderIcon className="animate-spin"/>
         );
     }
 
