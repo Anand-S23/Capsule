@@ -4,6 +4,7 @@ import { MenuIcon, XIcon } from "lucide-react";
 import { AuthButton } from "./auth-button";
 import { NavLink, NavLinkButton } from "./navlink";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export type LinkType = {
     title: string;
@@ -20,11 +21,12 @@ const links: Array<LinkType> = [
 
 export const Header = () => {
     const [open, setOpen] = useState<boolean>(false);
+    const router = useRouter();
 
     return (
-        <header className="h-16 w-full border-b-2 border-slate-200">
+        <header className="h-16 w-full border-b border-slate-200">
             <nav className="lg:max-w-screen-2xl mx-auto flex items-center justify-between h-full px-4">
-                <div className="pl-2 flex items-center gap-x-3">
+                <div className="pl-2 flex items-center gap-x-3 hover:cursor-pointer" onClick={() => router.push('/')}>
                     <button className="bg-violet-600 h-10 w-10 hidden sm:block"></button>
                     <h1 className="text-2xl font-extrabold">
                         Capsule

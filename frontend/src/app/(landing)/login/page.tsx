@@ -8,7 +8,7 @@ const Login = () => {
 
     return (
         <div className="flex justify-center items-center h-full py-12">
-            <div className="bg-white p-8 rounded shadow-lg w-96">
+            <div className="bg-white p-8 rounded shadow-lg w-[576px]">
                 <h1 className="px-5 text-2xl text-semibold pt-5"> Login </h1>
 
                 <LoginForm />

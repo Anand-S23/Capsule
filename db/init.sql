@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS reminders (
     id            SERIAL PRIMARY KEY NOT NULL,
     connection_id UUID REFERENCES connections(id) NOT NULL,
     owner_id      UUID REFERENCES users(id) NOT NULL,
-    time          DATETIME NOT NULL,
+    time          TIMESTAMP NOT NULL,
     description   VARCHAR(256),
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

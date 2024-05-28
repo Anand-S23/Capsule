@@ -48,7 +48,7 @@ const LoginForm = () => {
     }
 
     return (
-        <div className="flex flex-col w-full max-w-md gap-1.5 pt-2 p-5">
+        <div className="flex flex-col w-full max-w-lg gap-1.5 pt-2 p-5">
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Input 
                     {...register("email")}
